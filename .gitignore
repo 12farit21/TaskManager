@@ -1,0 +1,9 @@
+# Go binaries
+/bin
+/obj
+/*.exe
+/*.out
+/*.exe~
+
+# Docker data
+/db/data

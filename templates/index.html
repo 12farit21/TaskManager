@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+</head>
+<body>
+  <h1>Task Manager</h1>
+  <h2>Create Task</h2>
+  <form id="createTaskForm">
+    <input type="number" id="userID" placeholder="User ID" required />
+    <input type="text" id="description" placeholder="Task Description" required />
+    <input type="datetime-local" id="recallDate" required />
+    <button type="submit">Create Task</button>
+  </form>
+
+  <h2>Update Task</h2>
+  <form id="updateTaskForm">
+    <input type="number" id="updateTaskID" placeholder="Task ID" required />
+    <input type="number" id="updateUserID" placeholder="User ID" required />
+    <input type="text" id="updateDescription" placeholder="Task Description" required />
+    <input type="datetime-local" id="updateRecallDate" required />
+    <button type="submit">Update Task</button>
+  </form>
+
+  <h2>Tasks</h2>
+  <table border="1" id="tasksTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>UserID</th>
+        <th>Description</th>
+        <th>RecallDate</th>
+        <th>CreatedDate</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Create User</h2>
+  <form id="createUserForm">
+    <input type="text" id="userName" placeholder="User Name" required />
+    <input type="email" id="userEmail" placeholder="User Email" required />
+    <button type="submit">Create User</button>
+  </form>
+
+  <h2>Users</h2>
+  <table border="1" id="usersTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    // cписок пользователей
+    async function fetchUsers() {
+      const response = await fetch('/users');
+      const users = await response.json();
+      const tableBody = document.querySelector("#usersTable tbody");
+      tableBody.innerHTML = "";
+      users.forEach(user => {
+        tableBody.innerHTML += `
+          <tr>
+            <td>${user.ID}</td>
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td><button onclick="deleteUser(${user.ID})">Delete</button></td>
+          </tr>
+        `;
+      });
+    }
+
+    // список задач
+    async function fetchTasks() {
+      const response = await fetch('/tasks');
+      const tasks = await response.json();
+      const tableBody = document.querySelector("#tasksTable tbody");
+      tableBody.innerHTML = "";
+      tasks.forEach(task => {
+        tableBody.innerHTML += `
+          <tr>
+            <td>${task.ID}</td>
+            <td>${task.UserID}</td>
+            <td>${task.Description}</td>
+            <td>${task.RecallDate}</td>
+            <td>${task.CreatedDate}</td>
+            <td>
+              <button onclick="populateUpdateForm(${task.ID})">Edit</button>
+              <button onclick="deleteTask(${task.ID})">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // обработчик формы создания пользователя
+    document.getElementById("createUserForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("userName").value;
+      const email = document.getElementById("userEmail").value;
+
+      await fetch('/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Name: name, Email: email }),
+      });
+      fetchUsers();
+    });
+
+    // обработчик формы создания задачи
+    document.getElementById("createTaskForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userID = parseInt(document.getElementById("userID").value);
+      const description = document.getElementById("description").value;
+      let recallDate = document.getElementById("recallDate").value;
+      recallDate = new Date(recallDate).toISOString();
+
+      await fetch('/tasks/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          UserID: userID,
+          Description: description,
+          RecallDate: recallDate,
+        }),
+      });
+      fetchTasks();
+    });
+
+    // обработчик формы обновления задачи
+    document.getElementById("updateTaskForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const taskID = parseInt(document.getElementById("updateTaskID").value);
+      const userID = parseInt(document.getElementById("updateUserID").value);
+      const description = document.getElementById("updateDescription").value;
+      let recallDate = document.getElementById("updateRecallDate").value;
+      recallDate = new Date(recallDate).toISOString();
+
+      await fetch('/tasks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ID: taskID,
+          UserID: userID,
+          Description: description,
+          RecallDate: recallDate,
+        }),
+      });
+      fetchTasks();
+    });
+
+    // удаление пользователя
+    async function deleteUser(id) {
+      await fetch(`/users/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ID: id }),
+      });
+      fetchUsers();
+    }
+
+    // удаление задачи
+    async function deleteTask(id) {
+      await fetch(`/tasks/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ID: id }),
+      });
+      fetchTasks();
+    }
+
+    // заполнение формы обновления задачи данными из таблицы
+    function populateUpdateForm(id) {
+      fetch(`/tasks/${id}`)
+        .then(response => response.json())
+        .then(task => {
+          document.getElementById("updateTaskID").value = task.ID;
+          document.getElementById("updateUserID").value = task.UserID;
+          document.getElementById("updateDescription").value = task.Description;
+          document.getElementById("updateRecallDate").value = new Date(task.RecallDate).toISOString().slice(0, 16);
+        });
+    }
+
+    // загрузка списка задач и пользователей при загрузке страницы
+    fetchTasks();
+    fetchUsers();
+  </script>
+</body>
+</html>
