@@ -16,5 +16,5 @@ To run the project, you will need:
    `bash
    git clone https://github.com/your-username/task-manager.git
    cd task-manager
-2. Run project
+2. Run project:
    go run main.go
